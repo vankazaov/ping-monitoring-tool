@@ -15,7 +15,7 @@ class Controller
         new Setup();
         if (Setup::$ready) {
             self::$sapi = php_sapi_name();
-            $this->http_codes =  parse_ini_file(ROOT . '/status_code_definitions.ini');
+            $this->http_codes =  parse_ini_file(__DIR__ . '/status_code_definitions.ini');
             $this->repository = new Repository();
             $this->mailer = new Mailer($this->repository);
         }

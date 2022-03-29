@@ -14,7 +14,7 @@ if (!class_exists('SQLite3')) {
 $root_dir = realpath(__DIR__.'/');
 define('ROOT', $root_dir);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once $root_dir . '/vendor/autoload.php';
 
 try {
     Controller::$debug = true;
