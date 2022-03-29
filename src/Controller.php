@@ -44,7 +44,7 @@ class Controller
         $this->mailer->sendWeekReport();
     }
 
-    public function pingDomain($host){
+    public function pingDomain($host, $down_count = 0){
         $chTest = curl_init();
         curl_setopt($chTest, CURLOPT_URL, $host);
         curl_setopt($chTest, CURLOPT_HEADER, true);
@@ -57,6 +57,11 @@ class Controller
         $sizeTest = (int) curl_getinfo($chTest,  CURLINFO_SIZE_DOWNLOAD);
         $totalTime = curl_getinfo($chTest,   CURLINFO_TOTAL_TIME);
         curl_close($chTest);
+        if ($codeDefinition === 'DOWN' && $down_count < 3) {
+            $down_count++;
+            sleep(1);
+            $this->pingDomain($host, $down_count);
+        }
 
         return [
             'code' => (int) $codeTest,
