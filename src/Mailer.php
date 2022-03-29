@@ -188,7 +188,7 @@ class Mailer
             // Получим последнюю запись из лога
             $lastLog = $this->repository->getLastLog($server->server_id);
             if ($lastLog) {
-                $timeLog = (new DateTimeImmutable($lastLog->datetime))->getTimestamp();
+                $timeLog = (new \DateTimeImmutable($lastLog->datetime))->getTimestamp();
                 $diff = (int) round((time() - $timeLog)/60);
                 if ($diff > 0 && $diff % $this->repeat_down_every_minutes === 0) {
                     $this->repository->setNotSenderNotify($server->server_id);

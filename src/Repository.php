@@ -65,6 +65,15 @@ class Repository
         $stm = $this->pdo->query("SELECT * FROM `config`");
         return $stm->fetchAll();
     }
+    /**
+     * Получение настроек
+     * @return array|false
+     */
+    public function getConfigParam($param)
+    {
+        $stm = $this->pdo->query("SELECT `value` FROM `config` WHERE `parameter`='$param'");
+        return (int) $stm->fetch()->value;
+    }
 
     /**
      * Удаление записей из таблицы мониторинга

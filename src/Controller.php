@@ -9,6 +9,7 @@ class Controller
     private $repository;
     private $mailer;
     private $http_codes;
+    private $delay_down;
 
     public function __construct()
     {
@@ -18,6 +19,7 @@ class Controller
             $this->http_codes =  parse_ini_file(__DIR__ . '/status_code_definitions.ini');
             $this->repository = new Repository();
             $this->mailer = new Mailer($this->repository);
+            $this->delay_down = $this->repository->getConfigParam('delay_down');
         }
     }
 
@@ -59,7 +61,7 @@ class Controller
         curl_close($chTest);
         if ($codeDefinition === 'DOWN' && $down_count < 3) {
             $down_count++;
-            sleep(1);
+            sleep($this->delay_down);
             $this->pingDomain($host, $down_count);
         }
 
