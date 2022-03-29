@@ -1,0 +1,20 @@
+{
+    "name": "vankazaov/ping-monitoring-tool",
+    "description": "Ping Monitoring Tool on PHP",
+    "type": "project",
+    "license": "BSD-3-Clause",
+    "autoload": {
+        "psr-4": {
+            "PingMonitoringTool\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Ivan Zayashnikov",
+            "email": "prog@mera-device.ru"
+        }
+    ],
+    "require": {
+        "php": ">=7.2"
+    }
+}

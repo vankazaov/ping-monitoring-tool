@@ -1,0 +1,6 @@
+/vendor/
+/src/config.ini
+*.md5
+*.phar
+*.db
+.idea/
