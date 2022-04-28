@@ -41,8 +41,15 @@ class Controller
                 $this->setDown($server->server_id, $response);
             }
         }
-        $this->mailer->sendMessage();
-        $this->mailer->sendRepeatLetter();
+        $this->debugMessage("Проверяем, что сообщение было 2 раза подряд.");
+        if ($this->isTwice()) {
+            $this->debugMessage("Можно отправлять письмо.");
+            $this->mailer->sendMessage();
+            $this->mailer->sendRepeatLetter();
+        } else {
+            $this->debugMessage("Отправлять не нужно.");
+        }
+
         $this->mailer->sendWeekReport();
     }
 
@@ -115,6 +122,31 @@ class Controller
             $this->repository->insertMonitoringServer($server_id, 0, $current_time, $response, 0);
         } else {
             $this->debugMessage("Сервер был в статусе DOWN. Ничего не делаем.");
+        }
+    }
+
+    private function isTwice()
+    {
+        $not_notify = $this->repository->getNotNotifyMonitoring();
+        $week = date("Y-m-d", strtotime('today'));
+        foreach ($not_notify as $server) {
+            if ($server->status) return true;
+            $rows = $this->repository->getLogList($server->server_id, $week, $week);
+            $rows = array_reverse($rows);
+            if (count($rows) < 2) return false;
+            $fail_count = 0;
+            foreach ($rows as $row) {
+                if ($row->status >= 200 AND $row->status < 300) {
+                    return false;
+                } else {
+                    $fail_count++;
+                }
+
+                $this->debugMessage("fail_count: $fail_count.");
+
+
+                if ($fail_count >= 2) return true;
+            }
         }
     }
 
