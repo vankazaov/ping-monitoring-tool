@@ -130,22 +130,30 @@ class Controller
         $not_notify = $this->repository->getNotNotifyMonitoring();
         $week = date("Y-m-d", strtotime('today'));
         foreach ($not_notify as $server) {
-            if ($server->status) return true;
+            $mode = 'down';
+            if ($server->status) {
+                $mode = 'up';
+            }
             $rows = $this->repository->getLogList($server->server_id, $week, $week);
             $rows = array_reverse($rows);
             if (count($rows) < 2) return false;
+            $up_count = 0;
             $fail_count = 0;
             foreach ($rows as $row) {
                 if ($row->status >= 200 AND $row->status < 300) {
-                    return false;
+                    $up_count++;
+                    if ($mode === 'down') return false;
                 } else {
                     $fail_count++;
+                    if ($mode === 'up') return false;
                 }
 
-                $this->debugMessage("fail_count: $fail_count.");
+                $this->debugMessage("mode: $mode, fail_count: $fail_count.");
+                $this->debugMessage("mode: $mode, up_count: $up_count.");
 
 
-                if ($fail_count >= 2) return true;
+                if ($mode === 'down' && $fail_count >= 2) return true;
+                if ($mode === 'up' && $up_count >= 2) return true;
             }
         }
     }
