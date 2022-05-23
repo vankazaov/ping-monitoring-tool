@@ -8,6 +8,7 @@ class Status
 {
     public function __construct(
         private string $domain,
+        private \DateTimeImmutable $datetime,
         private int $code,
         private string $status,
         private float $time,
@@ -54,6 +55,14 @@ class Status
     public function getSize(): float
     {
         return $this->size;
+    }
+
+    /**
+     * @return \DateTimeImmutable
+     */
+    public function getDatetime(): \DateTimeImmutable
+    {
+        return $this->datetime;
     }
 
 

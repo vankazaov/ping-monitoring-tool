@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool;
 
+use PingMonitoringTool\Mailer\MailServer;
+
 class Repository
 {
     const PATH_TO_SQLITE_FILE = ROOT . '/monitoring.db';
     private $pdo;
-    private $sapi = false;
-    private $from_server;
 
     public function __construct() {
         if ($this->pdo == null) {
@@ -20,299 +20,310 @@ class Repository
                     \PDO::ATTR_EMULATE_PREPARES   => false,
                 ];
                 $this->pdo = new \PDO("sqlite:" . self::PATH_TO_SQLITE_FILE, null, null, $opt);
-                $this->init();
             } catch (\PDOException $e) {
                 throw new \DomainException($e->getMessage());
             }
         }
     }
 
-    /**
-     * Список серверов для мониторинга
-     * @return array|false
-     */
-    public function getServers()
+    public function getTables(): array
     {
-        $stm = $this->pdo->query("SELECT * FROM `servers`");
+        $stm = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='table'");
+        $data = $stm->fetchAll();
+        return array_map(fn($value): string => $value->name, $data);
+    }
+
+    public function getMonitoringList()
+    {
+        $stm = $this->pdo->query("SELECT * FROM `monitoring`");
         return $stm->fetchAll();
     }
 
-    /**
-     * Запись лога мониторинга
-     * @param $server_id
-     * @param $status
-     * @param $message
-     */
-    public function writeLog($server_id, $status, $message)
+    public function setDown(Domain $domain, ?Status $status): void
     {
-        $current_time = date("Y-m-d H:i:s");
-        $sql = 'INSERT INTO logs(server_id, status, datetime, message) 
-                    VALUES(:server_id, :status, :datetime, :message)';
+        /**
+         * @var $domainDB VerifiedDomain
+         */
+        $domainDB = $this->getDomain($domain->getValue());
+        if (!is_null($domainDB)) {
+            $domainDB->setSuccess(0);
+            $domainDB->setLastAt(new \DateTimeImmutable());
+            $domainDB->increaseFalls();
+            // Обновляем entity
+            $this->setDomain($domainDB);
+        }
+    }
+    public function setUp(Domain $domain, Status $status): void
+    {
+        /**
+         * @var $domainDB VerifiedDomain
+         */
+        $domainDB = $this->getDomain($domain->getValue());
+        if (!is_null($domainDB)) {
+            $domainDB->setFalls(0);
+            $domainDB->setLastAt(new \DateTimeImmutable());
+            $domainDB->increaseSuccess();
+            // Обновляем entity
+            $this->setDomain($domainDB);
+        }
+    }
+
+
+    public function getDomain(string $domain_name): ?VerifiedDomain
+    {
+        $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `domain`='$domain_name'");
+        if($res = $stm->fetch()) {
+            $verifiedDomain = new VerifiedDomain($res->domain);
+            $verifiedDomain->setSuccess($res->success);
+            $verifiedDomain->setFalls($res->falls);
+            $verifiedDomain->setLastAt(new \DateTimeImmutable($res->last_at));
+            $verifiedDomain->setNotifyFalls($res->notify_falls);
+            $verifiedDomain->setNotifySuccess($res->notify_success);
+            $verifiedDomain->setWeek($res->week);
+            $verifiedDomain->setWeekReport((bool) $res->week_report);
+            return $verifiedDomain;
+        }
+        return null;
+    }
+
+    private function setDomain(VerifiedDomain $domainDB): void
+    {
+        $sql = "UPDATE monitoring 
+                SET `success`=:success, `falls`=:falls, `last_at`=:last_at, 
+                    `notify_success`=:notify_success,`notify_falls`=:notify_falls,
+                    `week`=:week, `week_report`=:week_report 
+                WHERE `domain`=:domain";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':server_id', $server_id);
-        $stmt->bindValue(':status', $status);
-        $stmt->bindValue(':datetime', $current_time);
-        $stmt->bindValue(':message', '['. $this->from_server . ']: ' . $message);
+        $stmt->bindValue(':success', $domainDB->getSuccess());
+        $stmt->bindValue(':falls', $domainDB->getFalls());
+        $stmt->bindValue(':last_at', $domainDB->getLastAt()->format('Y-m-d H:i:s'));
+        $stmt->bindValue(':notify_success',$domainDB->getNotifySuccess());
+        $stmt->bindValue(':notify_falls',$domainDB->getNotifyFalls());
+        $stmt->bindValue(':week', $domainDB->getWeek());
+        $stmt->bindValue(':week_report', (int) $domainDB->isWeekReport());
+        $stmt->bindValue(':domain', $domainDB->getDomain());
         $stmt->execute();
     }
 
-    /**
-     * Получение настроек
-     * @return array|false
-     */
-    public function getConfig()
+    public function canSendNotify(Domain $domain): ?string
     {
-        $stm = $this->pdo->query("SELECT * FROM `config`");
-        return $stm->fetchAll();
+        /**
+         * @var $domainDB VerifiedDomain
+         */
+        $domainDB = $this->getDomain($domain->getValue());
+        if (!is_null($domainDB)) {
+            if ($domainDB->getSuccess() > 0) {
+                $diff = $domainDB->getSuccess() - $domainDB->getFalls();
+                if ($diff >= 2
+                    && $domainDB->getNotifySuccess() <= 0
+                    && ($domainDB->getNotifyFalls() < 0 || $domainDB->getNotifyFalls() > 0))
+                {
+                    return 'success';
+                }
+            } else {
+                $diff = $domainDB->getFalls() - $domainDB->getSuccess();
+                if ($diff >= 2
+                    && $domainDB->getNotifyFalls() <= 0
+                    && ($domainDB->getNotifySuccess() < 0 || $domainDB->getNotifySuccess() > 0))
+                {
+                    return 'falls';
+                }
+            }
+            return null;
+        }
     }
+
+    public function setNotify(Domain $domain, string $typeSendNotify)
+    {
+        /**
+         * @var $domainDB VerifiedDomain
+         */
+        $domainDB = $this->getDomain($domain->getValue());
+        if (!is_null($domainDB)) {
+            if ($typeSendNotify === 'success') {
+                $domainDB->setNotifySuccess(1);
+                $domainDB->setNotifyFalls(0);
+            } else {
+                $domainDB->setNotifySuccess(0);
+                $domainDB->setNotifyFalls(1);
+            }
+            $this->setDomain($domainDB);
+        }
+    }
+
     /**
      * Получение настроек
-     * @return array|false
+     * @return string|array
      */
-    public function getConfigParam($param)
+    public function getConfigParam($param): string|array
     {
         $stm = $this->pdo->query("SELECT `value` FROM `config` WHERE `parameter`='$param'");
-        return (int) $stm->fetch()->value;
+        $value = $stm->fetch()->value ?? '';
+        if (is_array($value_array = json_decode($value, true))) {
+            return $value_array;
+        }
+        return $value;
     }
 
-    /**
-     * Удаление записей из таблицы мониторинга
-     * @param $server_id
-     */
-    public function clearMonitoring($server_id) {
-        $this->pdo->exec("DELETE FROM `monitoring` WHERE `server_id`='$server_id'");
-    }
-
-    /**
-     * Добавление записи в мониторинг
-     * @param $server_id
-     * @param $status
-     * @param $datetime
-     * @param array $response
-     * @param $notify
-     */
-    public function insertMonitoringServer($server_id, $status, $datetime, array $response, $notify)
+    public function getMailerServers()
     {
-        $response_json = json_encode($response, JSON_UNESCAPED_UNICODE);
-        $sql = 'INSERT INTO monitoring (server_id, status, datetime,response,notify) 
-                VALUES(:server_id, :status, :datetime,:response, :notify)';
+
+        $nameServer = $this->getConfigParam('from_server');
+        $from = $this->getConfigParam('from');
+        $recipients = $this->getConfigParam('recipients');
+
+        $base = new MailServer($nameServer);
+        $base->setFrom($from);
+        $base->setHost($this->getConfigParam('smtp_host_base'));
+        $base->setPort('25');
+        $base->setRecipients($recipients);
+
+        $reserve = new MailServer($nameServer);
+        $reserve->setFrom($from);
+        $reserve->setHost($this->getConfigParam('smtp_host_reserve'));
+        $reserve->setPort($this->getConfigParam('smtp_port_reserve'));
+        $reserve->setUsername($this->getConfigParam('smtp_username_reserve'));
+        $reserve->setPassword($this->getConfigParam('smtp_password_reserve'));
+        $reserve->setRecipients($recipients);
+
+        return [
+            'base' => $base,
+            'reserve' => $reserve
+        ];
+    }
+
+    public function writeStats(string $domain, int $status)
+    {
+        $date = date('Y-m-d');
+        $currRow = $this->getOrInsertStatIfNotExists($domain);
+
+        $sql = "UPDATE stats 
+                SET `success`=:success, `falls`=:falls
+                WHERE `domain`=:domain AND `date`=:date";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':server_id', $server_id);
-        $stmt->bindValue(':status', $status);
-        $stmt->bindValue(':datetime', $datetime);
-        $stmt->bindValue(':response', $response_json);
-        $stmt->bindValue(':notify', $notify);
+
+        if ($status) {
+            $stmt->bindValue(':success', $currRow->success+1);
+            $stmt->bindValue(':falls', $currRow->falls);
+        } else {
+            $stmt->bindValue(':success', $currRow->success);
+            $stmt->bindValue(':falls', $currRow->falls+1);
+        }
+
+        $stmt->bindValue(':domain', $domain);
+        $stmt->bindValue(':date', $date);
         $stmt->execute();
     }
 
-    /**
-     * Проверяет, был ли сервер в нерабочем состоянии
-     * @param $server_id
-     * @return bool
-     */
-    public function isDown($server_id)
+    private function getStatRowForDate(string $domain, string $date)
     {
-        $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `server_id`='$server_id' AND `status`='0'");
-        if($stm->fetch()) return true;
-        return false;
-    }
-
-    /**
-     * Проверяет, был ли сервер в рабочем состоянии
-     * @param $server_id
-     * @return bool
-     */
-    public function isUp($server_id)
-    {
-        $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `server_id`='$server_id' AND `status`='1'");
-        if($stm->fetch()) return true;
-        return false;
-    }
-
-    /**
-     * Поиск сервера по имени
-     * @param string $name_server
-     * @return false
-     */
-    public function getServerIdByName(string $name_server)
-    {
-        $stm = $this->pdo->query("SELECT * FROM `servers` WHERE `server_name`='$name_server'");
-        if($res = $stm->fetch()) return $res->server_id;
-        return false;
-    }
-
-    /**
-     * Получение списка записей мониторинга по которым не было отправки уведомлений
-     * @return array|false
-     */
-    public function getNotNotifyMonitoring()
-    {
-        $stm = $this->pdo->query("SELECT * FROM monitoring WHERE notify='0'");
-        return $stm->fetchAll();
-    }
-
-    /**
-     * Получение списка записей мониторинга для повторной отправки уведомлений
-     * @return array|false
-     */
-    public function getRepeatNotifyMonitoring()
-    {
-        $stm = $this->pdo->query("SELECT * FROM monitoring WHERE status='0' AND notify='1'");
-        return $stm->fetchAll();
-    }
-
-    /**
-     * Отметка в мониторинге об отпрвки уведомления
-     * @param $server_id
-     * @return bool
-     */
-    public function setSenderNotify($server_id)
-    {
-        $sql = "UPDATE monitoring "
-            . "SET notify = 1 "
-            . "WHERE server_id = :server_id";
-
-        $stmt = $this->pdo->prepare($sql);
-
-        // passing values to the parameters
-        $stmt->bindValue(':server_id', $server_id);
-
-        // execute the update statement
-        return $stmt->execute();
-    }
-    /**
-     * Снятие отметки в мониторинге об отпрвке уведомления
-     * @param $server_id
-     * @return bool
-     */
-    public function setNotSenderNotify($server_id)
-    {
-        $sql = "UPDATE monitoring "
-            . "SET notify = 0 "
-            . "WHERE server_id = :server_id";
-
-        $stmt = $this->pdo->prepare($sql);
-
-        // passing values to the parameters
-        $stmt->bindValue(':server_id', $server_id);
-
-        // execute the update statement
-        return $stmt->execute();
-    }
-
-    /**
-     * Получение информации о сервере по его id
-     * @param $server_id
-     * @return mixed
-     */
-    public function getServerById($server_id)
-    {
-        $stm = $this->pdo->query("SELECT * FROM `servers` WHERE  `server_id`='$server_id'");
+        $stm = $this->pdo->query("SELECT * FROM `stats` WHERE `domain`='$domain' AND `date`='$date'");
         return $stm->fetch();
     }
 
-    /**
-     * Получение всех данных из таблицы (для дебага)
-     * @param $table
-     * @return array|false
-     */
-    public function getTableData($table)
+    private function getOrInsertStatIfNotExists(string $domain)
     {
-        $stm = $this->pdo->query("SELECT * FROM `$table` ");
-        return $stm->fetchAll();
-    }
+        $date = date('Y-m-d');
+        $week = date('W');
+        $currRowStat = $this->getStatRowForDate($domain, $date);
 
-    /**
-     * Получает лог за текущий день (для вставки в письмо)
-     * @param $server_id
-     * @return string
-     */
-    public function getLog($server_id)
-    {
-        $date_current = date('Y-m-d 00:00:00');
-        $stm = $this->pdo->query("SELECT * FROM `logs` 
-            WHERE `server_id`='$server_id' AND `datetime` > '$date_current'");
-        $message = '';
-        foreach ($stm->fetchAll() as $item) {
-            $message .= "{$item->datetime}: {$item->message}" . PHP_EOL;
+        if(!$currRowStat) {
+            $sql = "INSERT INTO stats 
+                (domain, date, week, success, falls) 
+                VALUES('$domain', '$date', '$week', '0', '0')";
+            $this->pdo->exec($sql);
+            $currRowStat = $this->getStatRowForDate($domain, $date);
         }
-        return $message;
+
+        return $currRowStat;
     }
 
-    public function getLogList($server_id, $start_week, $end_week)
+    public function getWeekReport()
     {
-        $stm = $this->pdo->query("SELECT * FROM `logs` 
-            WHERE `server_id`='$server_id' AND `datetime` >= '$start_week 00:00:00' AND `datetime` <= '$end_week 23:59:59'");
-        return $stm->fetchAll();
-    }
-
-
-    /**
-     * Получает последнюю запись из лога об учпешной проверке сервера
-     * @param $server_id
-     * @return mixed
-     */
-    public function getLastLog($server_id)
-    {
-        $stm = $this->pdo->query("SELECT * FROM `logs` 
-            WHERE `server_id`='$server_id' AND status > '200' AND status < '300' ORDER BY log_id DESC LIMIT 1");
-        return $stm->fetch();
-    }
-
-    /**
-     * Инициализация свойств класса данными из конфига
-     */
-    private function init()
-    {
-        foreach ($this->getConfig() as $object) {
-            if (property_exists($this, $param = $object->parameter)) {
-                if (is_array($value_array = json_decode($object->value, true))) {
-                    $this->{$param} = $value_array;
-                } else {
-                    $this->{$param} = $object->value;
-                }
-            }
+        // Если записей с текущей недели отсутствуют, то делаем обновление
+        $week = date("W");
+        $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `week`='$week'");
+        if (!$stm->fetch()) {
+            $this->pdo->exec("UPDATE `monitoring` SET `week`='$week', `week_report`='0'");
         }
-    }
-
-    public function getWeekReport($datetime)
-    {
-        $stm = $this->pdo->query("SELECT * FROM `reports` 
-            WHERE `datetime`='$datetime' AND send = '1' LIMIT 1");
-        return $stm->fetch();
-    }
-
-    public function calcUptime($start_week, $end_week)
-    {
-        $uptime_data = [];
-        foreach ($this->getServers() as $server) {
-            $logs = $this->getLogList($server->server_id, $start_week, $end_week);
-            if (empty($logs)) continue;
-            $uptime = [];
-            $uptime['server_id'] = $server->server_id;
-            $uptime['server_name'] = $server->server_name;
-            $uptime['total_checks'] = count($logs);
-            $uptime['successful_checks'] = 0;
-            $uptime['failed_checks'] = 0;
-            foreach ($logs as $log) {
-                if ($log->status >= 200 && $log->status < 300) {
-                    $uptime['successful_checks'] += 1;
-                } else {
-                    $uptime['failed_checks'] += 1;
-                }
-            }
-            $uptime['uptime_percents'] = round((100/$uptime['total_checks'])*$uptime['successful_checks'], 2);
-            $uptime_data[] = $uptime;
+        // Берем записи, по которым недельный отчет не отправлялся
+        $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `week`='$week' AND `week_report`='0'");
+        $data = $stm->fetchAll();
+        if (empty($data)) return false;
+        // Обрабатываем записи, добавляя статистику за предыдущую неделю
+        $week_ago = date("W", strtotime('monday previous week'));
+        foreach ($data as $item) {
+            $item->stats = $this->getStatForWeek($item->domain, $week_ago);
         }
-        return $uptime_data;
+        return $data;
     }
 
-    public function setSenderReport($datereport)
+    private function getStatForWeek(string $domain, string $week_ago)
     {
-        $sql = 'INSERT INTO reports (datetime, send) VALUES(:datetime, :send)';
+        $stm = $this->pdo->query("SELECT * FROM `stats` 
+                                           WHERE `week`='$week_ago' AND `domain`='$domain'");
+        $data = $stm->fetchAll();
+        $newdata = new \stdClass();
+        $all_success = 0;
+        $all_falls = 0;
+        foreach ($data as $item) {
+            $all_success += $item->success;
+            $all_falls += $item->falls;
+        }
+        $total_checks = $all_success + $all_falls;
+        $uptime = 100;
+        if ($total_checks > 0) {
+            $uptime = round((100/$total_checks)*$all_success, 2);
+        }
+
+
+        $newdata->all_success = $all_success;
+        $newdata->all_falls = $all_falls;
+        $newdata->total_checks = $total_checks;
+        $newdata->uptime = $uptime;
+        $newdata->data = $data;
+        $newdata->week = $week_ago;
+        $newdata->domain = $domain;
+
+        return $newdata;
+    }
+
+    public function setSendWeekReport()
+    {
+        $week = date("W");
+        $this->pdo->exec("UPDATE `monitoring` SET `week_report`='1'");
+
+    }
+
+    public function canSendRepeatNotify(string $domain)
+    {
+        $repeat_down = (int) $this->getConfigParam('repeat_down');
+        if (!$repeat_down) return false;
+
+        $repeat_down_every_minutes = (int) $this->getConfigParam('repeat_down_every_minutes');
+
+        $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `domain`='$domain' AND `notify_falls`='1'");
+        if (!$record = $stm->fetch()) {
+           return false;
+        }
+
+        if ($record->falls > 2 && $record->falls % $repeat_down_every_minutes === 0) {
+            return true;
+        }
+        return false;
+    }
+
+    public function writeLog(string $type, string $message, string $domain = '', int $status = 0):void
+    {
+        $current_time = date("Y-m-d H:i:s");
+        $sql = 'INSERT INTO logs(datetime, domain, type, status, message) 
+                    VALUES(:datetime, :domain, :type, :status, :message)';
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':datetime', $datereport);
-        $stmt->bindValue(':send', 1);
+        $stmt->bindValue(':datetime', $current_time);
+        $stmt->bindValue(':domain', $domain);
+        $stmt->bindValue(':type', $type);
+        $stmt->bindValue(':status', $status);
+        $stmt->bindValue(':message', $message);
         $stmt->execute();
     }
 

@@ -4,3 +4,4 @@
 *.phar
 *.db
 .idea/
+.phpunit.result.cache
