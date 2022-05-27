@@ -13,16 +13,7 @@ class PhpMailer extends AbstractMailer
 
         $result = false;
         $letter = $this->getLetter();
-        foreach ($this->mailServer->getRecipients() as $to)
-        {
-            $headers  = "MIME-Version: 1.0\r\n";
-            $headers .= "Content-type: text/plain; charset=utf-8\r\n"; // кодировка письма
-            $headers .= "From: Mera-PING <{$this->mailServer->getFrom()}>\r\n"; // от кого письмо
-            $headers .= "To: <$to>\r\n";
-
-            $result = mail($to, $letter->subject, $letter->message, $headers);
-        }
-       return $result;
+        return $this->sendFromMail($this->mailServer->getRecipients(), $letter);
     }
 
     public function sendReport(): bool
@@ -30,9 +21,14 @@ class PhpMailer extends AbstractMailer
         ini_set("SMTP", $this->mailServer->getHost());
         ini_set("sendmail_from", $this->mailServer->getFrom());
 
-        $result = false;
         $letter = $this->getReport($this->dataReport);
-        foreach ($this->mailServer->getRecipients() as $to)
+        return $this->sendFromMail($this->mailServer->getRecipients(), $letter);
+    }
+
+    protected function sendFromMail(array $recipients, $letter): bool
+    {
+        $result = false;
+        foreach ($recipients as $to)
         {
             $headers  = "MIME-Version: 1.0\r\n";
             $headers .= "Content-type: text/plain; charset=utf-8\r\n"; // кодировка письма
@@ -41,6 +37,6 @@ class PhpMailer extends AbstractMailer
 
             $result = mail($to, $letter->subject, $letter->message, $headers);
         }
-       return $result;
+        return $result;
     }
 }

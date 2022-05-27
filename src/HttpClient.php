@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool;
 
+use DateTimeImmutable;
+use RuntimeException;
+
 class HttpClient
 {
     private $http_codes = [
@@ -51,10 +54,10 @@ class HttpClient
         505=>"HTTP Version Not Supported"
     ];
 
-    public function get(string $domain): array
+    public function get(Domain $domain): array
     {
         $chPing = curl_init();
-        curl_setopt($chPing, CURLOPT_URL, $domain);
+        curl_setopt($chPing, CURLOPT_URL, $domain->getValue());
         curl_setopt($chPing, CURLOPT_USERAGENT, 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:99.0) Gecko/20100101 Firefox/99.0');
         curl_setopt($chPing, CURLOPT_HEADER, true);
         curl_setopt($chPing, CURLOPT_RETURNTRANSFER, true);
@@ -76,11 +79,11 @@ class HttpClient
         curl_close($chPing);
 
         if (isset($error_msg)) {
-            throw new \RuntimeException($error_msg);
+            throw new RuntimeException($error_msg);
         }
 
         return [
-            'datetime' => new \DateTimeImmutable(),
+            'datetime' => new DateTimeImmutable(),
             'domain' => $domain,
             'code' => $resultCode,
             'code_definition' => $resultCodeDefinition,

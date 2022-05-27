@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool;
 
+use Exception;
 use PingMonitoringTool\Mailer\ChainMailer;
 use PingMonitoringTool\Mailer\PhpMailer;
 use PingMonitoringTool\Mailer\SmtpMailer;
@@ -20,7 +21,7 @@ try {
     $repository = new Repository();
     $logger = new Logger('prod', 1, $repository);
     $error_handler = new ErrorHandler($logger);
-    (new Setup($error_handler))->init();
+    (new Setup())->init();
 
     $mailServers = $repository->getMailerServers();
     $mailer = new ChainMailer(
@@ -31,12 +32,12 @@ try {
 
     $monitor = new Monitoring($error_handler,$http_client);
 
-    $controller = new Controller($monitor, $repository, $mailer, $error_handler, $logger);
+    $controller = new Controller($monitor, $repository, $mailer, $logger);
     $controller->run();
 
     //$printer = new PrintDb();
     //$printer->printConsole('logs');
 
-} catch (\Exception $e) {
+} catch (Exception $e) {
     echo $e->getMessage() . PHP_EOL;
 }

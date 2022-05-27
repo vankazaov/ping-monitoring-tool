@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool;
 
+use DateTimeImmutable;
+
 class VerifiedDomain
 {
     private $domain;
@@ -15,7 +17,7 @@ class VerifiedDomain
     private $week;
     private $weekReport;
 
-    public function __construct(string $domain)
+    public function __construct(Domain $domain)
     {
         $this->domain = $domain;
     }
@@ -25,7 +27,7 @@ class VerifiedDomain
      */
     public function getDomain(): string
     {
-        return $this->domain;
+        return $this->domain->getValue();
     }
 
     /**
@@ -61,17 +63,17 @@ class VerifiedDomain
     }
 
     /**
-     * @return \DateTimeImmutable
+     * @return DateTimeImmutable
      */
-    public function getLastAt(): \DateTimeImmutable
+    public function getLastAt(): DateTimeImmutable
     {
        return $this->lastAt;
     }
 
     /**
-     * @param \DateTimeImmutable $lastAt
+     * @param DateTimeImmutable $lastAt
      */
-    public function setLastAt(\DateTimeImmutable $lastAt): void
+    public function setLastAt(DateTimeImmutable $lastAt): void
     {
         $this->lastAt = $lastAt;
     }

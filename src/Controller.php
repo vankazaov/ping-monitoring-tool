@@ -5,32 +5,30 @@ declare(strict_types=1);
 namespace PingMonitoringTool;
 
 use PingMonitoringTool\Mailer\Mailer;
+use RuntimeException;
 
 class Controller
 {
     private $monitor;
     private $repository;
     private $mailer;
-    private $handler;
     private $logger;
 
     public function __construct(
         Monitoring $monitor,
         Repository $repository,
         Mailer $mailer,
-        ErrorHandler $handler,
         Logger $logger)
     {
         $this->monitor = $monitor;
         $this->repository = $repository;
         $this->mailer = $mailer;
-        $this->handler = $handler;
         $this->logger = $logger;
 
         $tables = $this->repository->getTables();
 
         if (!in_array('monitoring', $tables)) {
-            throw new \RuntimeException('Database not initialized.');
+            throw new RuntimeException('Database not initialized.');
         }
     }
 
@@ -42,7 +40,7 @@ class Controller
             $status = $this->monitor->ping($domain);
             if ($this->monitor->isOK($status) ) {
                 $this->repository->setUp($domain, $status);
-                $this->repository->writeStats($domain->getValue(), 1);
+                $this->repository->writeStats($domain, 1);
                 $this->logger->info('OK: ' . $domain->getValue());
             } else {
                 $this->logger->info('DOWN: ' . $domain->getValue());
@@ -52,16 +50,16 @@ class Controller
 
             if ($typeSendNotify = $this->repository->canSendNotify($domain)) {
                 $this->logger->info("SEND $typeSendNotify: " . $domain->getValue());
-                $this->mailer->setDomain($domain->getValue());
+                $this->mailer->setDomain($domain);
                 $this->mailer->setTypeMessage($typeSendNotify);
                 $this->mailer->setStatusObject($status);
                 $this->mailer->send();
                 $this->repository->setNotify($domain, $typeSendNotify);
             }
 
-            if ($this->repository->canSendRepeatNotify($domain->getValue())) {
+            if ($this->repository->canSendRepeatNotify($domain)) {
                 $this->logger->info("SEND REPEAT: " . $domain->getValue());
-                $this->mailer->setDomain($domain->getValue());
+                $this->mailer->setDomain($domain);
                 $this->mailer->setTypeMessage('repeat');
                 $this->mailer->setStatusObject($status);
                 $this->mailer->send();

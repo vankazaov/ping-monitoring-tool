@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool;
 
+use DomainException;
+use PDO;
+use PDOException;
+
 class PrintDb
 {
     const PATH_TO_SQLITE_FILE = ROOT . '/monitoring.db';
@@ -13,13 +17,13 @@ class PrintDb
         if ($this->pdo == null) {
             try {
                 $opt = [
-                    \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
-                    \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_OBJ,
-                    \PDO::ATTR_EMULATE_PREPARES   => false,
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
+                    PDO::ATTR_EMULATE_PREPARES   => false,
                 ];
-                $this->pdo = new \PDO("sqlite:" . self::PATH_TO_SQLITE_FILE, null, null, $opt);
-            } catch (\PDOException $e) {
-                throw new \DomainException($e->getMessage());
+                $this->pdo = new PDO("sqlite:" . self::PATH_TO_SQLITE_FILE, null, null, $opt);
+            } catch (PDOException $e) {
+                throw new DomainException($e->getMessage());
             }
         }
     }

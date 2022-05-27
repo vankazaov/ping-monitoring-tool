@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool;
 
+use InvalidArgumentException;
+
 class Domain
 {
     private $value;
@@ -11,11 +13,11 @@ class Domain
     public function __construct(string $domain)
     {
         if (empty($domain)) {
-            throw new \InvalidArgumentException('Empty domain.');
+            throw new InvalidArgumentException('Empty domain.');
         }
 
         if (filter_var($domain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false) {
-            throw new \InvalidArgumentException('Invalid domain '. $domain);
+            throw new InvalidArgumentException('Invalid domain '. $domain);
         }
 
         $this->value = $domain;

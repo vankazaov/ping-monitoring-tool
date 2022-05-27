@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool;
 
+use DateTimeImmutable;
+use DomainException;
+use PDO;
+use PDOException;
 use PingMonitoringTool\Mailer\MailServer;
+use stdClass;
 
 class Repository
 {
@@ -15,13 +20,13 @@ class Repository
         if ($this->pdo == null) {
             try {
                 $opt = [
-                    \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
-                    \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_OBJ,
-                    \PDO::ATTR_EMULATE_PREPARES   => false,
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
+                    PDO::ATTR_EMULATE_PREPARES   => false,
                 ];
-                $this->pdo = new \PDO("sqlite:" . self::PATH_TO_SQLITE_FILE, null, null, $opt);
-            } catch (\PDOException $e) {
-                throw new \DomainException($e->getMessage());
+                $this->pdo = new PDO("sqlite:" . self::PATH_TO_SQLITE_FILE, null, null, $opt);
+            } catch (PDOException $e) {
+                throw new DomainException($e->getMessage());
             }
         }
     }
@@ -46,10 +51,10 @@ class Repository
         /**
          * @var $domainDB VerifiedDomain
          */
-        $domainDB = $this->getDomain($domain->getValue());
+        $domainDB = $this->getDomain($domain);
         if (!is_null($domainDB)) {
             $domainDB->setSuccess(0);
-            $domainDB->setLastAt(new \DateTimeImmutable());
+            $domainDB->setLastAt(new DateTimeImmutable());
             $domainDB->increaseFalls();
             // Обновляем entity
             $this->setDomain($domainDB);
@@ -60,10 +65,10 @@ class Repository
         /**
          * @var $domainDB VerifiedDomain
          */
-        $domainDB = $this->getDomain($domain->getValue());
+        $domainDB = $this->getDomain($domain);
         if (!is_null($domainDB)) {
             $domainDB->setFalls(0);
-            $domainDB->setLastAt(new \DateTimeImmutable());
+            $domainDB->setLastAt(new DateTimeImmutable());
             $domainDB->increaseSuccess();
             // Обновляем entity
             $this->setDomain($domainDB);
@@ -71,14 +76,17 @@ class Repository
     }
 
 
-    public function getDomain(string $domain_name): ?VerifiedDomain
+    public function getDomain(Domain $domain): ?VerifiedDomain
     {
-        $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `domain`='$domain_name'");
+        $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `domain`='{$domain->getValue()}'");
         if($res = $stm->fetch()) {
-            $verifiedDomain = new VerifiedDomain($res->domain);
+            $verifiedDomain = new VerifiedDomain($domain);
             $verifiedDomain->setSuccess($res->success);
             $verifiedDomain->setFalls($res->falls);
-            $verifiedDomain->setLastAt(new \DateTimeImmutable($res->last_at));
+            try {
+                $verifiedDomain->setLastAt(new DateTimeImmutable($res->last_at));
+            } catch (\Exception $e) {
+            }
             $verifiedDomain->setNotifyFalls($res->notify_falls);
             $verifiedDomain->setNotifySuccess($res->notify_success);
             $verifiedDomain->setWeek($res->week);
@@ -112,7 +120,7 @@ class Repository
         /**
          * @var $domainDB VerifiedDomain
          */
-        $domainDB = $this->getDomain($domain->getValue());
+        $domainDB = $this->getDomain($domain);
         if (!is_null($domainDB)) {
             if ($domainDB->getSuccess() > 0) {
                 $diff = $domainDB->getSuccess() - $domainDB->getFalls();
@@ -141,7 +149,7 @@ class Repository
         /**
          * @var $domainDB VerifiedDomain
          */
-        $domainDB = $this->getDomain($domain->getValue());
+        $domainDB = $this->getDomain($domain);
         if (!is_null($domainDB)) {
             if ($typeSendNotify === 'success') {
                 $domainDB->setNotifySuccess(1);
@@ -168,7 +176,7 @@ class Repository
         return $value;
     }
 
-    public function getMailerServers()
+    public function getMailerServers(): array
     {
 
         $nameServer = $this->getConfigParam('from_server');
@@ -180,6 +188,7 @@ class Repository
         $base->setHost($this->getConfigParam('smtp_host_base'));
         $base->setPort('25');
         $base->setRecipients($recipients);
+
 
         $reserve = new MailServer($nameServer);
         $reserve->setFrom($from);
@@ -195,7 +204,7 @@ class Repository
         ];
     }
 
-    public function writeStats(string $domain, int $status)
+    public function writeStats(Domain $domain, int $status)
     {
         $date = date('Y-m-d');
         $currRow = $this->getOrInsertStatIfNotExists($domain);
@@ -213,18 +222,18 @@ class Repository
             $stmt->bindValue(':falls', $currRow->falls+1);
         }
 
-        $stmt->bindValue(':domain', $domain);
+        $stmt->bindValue(':domain', $domain->getValue());
         $stmt->bindValue(':date', $date);
         $stmt->execute();
     }
 
-    private function getStatRowForDate(string $domain, string $date)
+    private function getStatRowForDate(Domain $domain, string $date)
     {
-        $stm = $this->pdo->query("SELECT * FROM `stats` WHERE `domain`='$domain' AND `date`='$date'");
+        $stm = $this->pdo->query("SELECT * FROM `stats` WHERE `domain`='{$domain->getValue()}' AND `date`='$date'");
         return $stm->fetch();
     }
 
-    private function getOrInsertStatIfNotExists(string $domain)
+    private function getOrInsertStatIfNotExists(Domain $domain)
     {
         $date = date('Y-m-d');
         $week = date('W');
@@ -233,7 +242,7 @@ class Repository
         if(!$currRowStat) {
             $sql = "INSERT INTO stats 
                 (domain, date, week, success, falls) 
-                VALUES('$domain', '$date', '$week', '0', '0')";
+                VALUES('{$domain->getValue()}', '$date', '$week', '0', '0')";
             $this->pdo->exec($sql);
             $currRowStat = $this->getStatRowForDate($domain, $date);
         }
@@ -261,12 +270,12 @@ class Repository
         return $data;
     }
 
-    private function getStatForWeek(string $domain, string $week_ago)
+    private function getStatForWeek(string $domain, string $week_ago): stdClass
     {
         $stm = $this->pdo->query("SELECT * FROM `stats` 
                                            WHERE `week`='$week_ago' AND `domain`='$domain'");
         $data = $stm->fetchAll();
-        $newdata = new \stdClass();
+        $newdata = new stdClass();
         $all_success = 0;
         $all_falls = 0;
         foreach ($data as $item) {
@@ -298,14 +307,14 @@ class Repository
 
     }
 
-    public function canSendRepeatNotify(string $domain)
+    public function canSendRepeatNotify(Domain $domain): bool
     {
         $repeat_down = (int) $this->getConfigParam('repeat_down');
         if (!$repeat_down) return false;
 
         $repeat_down_every_minutes = (int) $this->getConfigParam('repeat_down_every_minutes');
 
-        $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `domain`='$domain' AND `notify_falls`='1'");
+        $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `domain`='{$domain->getValue()}' AND `notify_falls`='1'");
         if (!$record = $stm->fetch()) {
            return false;
         }

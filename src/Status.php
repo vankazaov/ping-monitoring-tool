@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool;
 
+use DateTimeImmutable;
+
 class Status
 {
     private $domain;
@@ -14,8 +16,8 @@ class Status
     private $size;
 
     public function __construct(
-        string $domain,
-        \DateTimeImmutable $datetime,
+        Domain $domain,
+        DateTimeImmutable $datetime,
         int $code,
         string $status,
         float $time,
@@ -35,7 +37,7 @@ class Status
      */
     public function getDomain(): string
     {
-        return $this->domain;
+        return $this->domain->getValue();
     }
 
     /**
@@ -71,9 +73,9 @@ class Status
     }
 
     /**
-     * @return \DateTimeImmutable
+     * @return DateTimeImmutable
      */
-    public function getDatetime(): \DateTimeImmutable
+    public function getDatetime(): DateTimeImmutable
     {
         return $this->datetime;
     }

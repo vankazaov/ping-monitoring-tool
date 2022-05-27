@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace PingMonitoringTool;
 
 
+use Exception;
+
 class Monitoring
 {
     private $handler;
@@ -19,14 +21,14 @@ class Monitoring
     public function ping(Domain $domain): ?Status
     {
         try {
-            $result = $this->client->get($domain->getValue());
-        } catch (\Exception $e) {
+            $result = $this->client->get($domain);
+        } catch (Exception $e) {
             $this->handler->handle($e);
         }
 
         if ($result['code'] > 0) {
             return new Status(
-                $domain->getValue(),
+                $domain,
                 $result['datetime'],
                 $result['code'],
                 $result['code_definition'],

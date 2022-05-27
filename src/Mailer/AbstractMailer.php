@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool\Mailer;
 
+use PingMonitoringTool\Domain;
 use PingMonitoringTool\Status;
-use function Couchbase\defaultDecoder;
+use stdClass;
 
 class AbstractMailer implements Mailer
 {
+    /**
+     * @var Domain
+     */
     protected $domain;
     protected $typeMessage;
     protected $dataReport;
@@ -35,7 +39,7 @@ class AbstractMailer implements Mailer
 
     public function getLetter(): object
     {
-        $letter = new \stdClass();
+        $letter = new stdClass();
         if (is_null($this->statusObject)) {
             if ($this->typeMessage === 'repeat') {
                 $letter->subject = 'REPEAT PING ALERT from ';
@@ -44,7 +48,7 @@ class AbstractMailer implements Mailer
             }
 
             $letter->subject .= $this->mailServer->getName() . ' ';
-            $letter->subject .= "[ {$this->domain} ]";
+            $letter->subject .= "[ {$this->domain->getValue()} ]";
             $letter->subject .= " DOWN 0, 0 ms, 0 byte";
             $letter->message = 'FROM: '. $this->mailServer->getName() . PHP_EOL;
             $letter->message .= date('d.m.Y H:i:s') .': ' . $letter->subject . PHP_EOL;
@@ -55,7 +59,7 @@ class AbstractMailer implements Mailer
                 $letter->subject = $this->statusObject->getStatus() === 'OK' ? 'PING RECOVERY from ' : 'PING ALERT from ';
             }
             $letter->subject .= $this->mailServer->getName() . ' ';
-            $letter->subject .= "[ {$this->domain} ]";
+            $letter->subject .= "[ {$this->domain->getValue()} ]";
             $letter->subject .= " {$this->statusObject->getCode()} {$this->statusObject->getStatus()}, {$this->statusObject->getTime()} ms, {$this->statusObject->getSize()} byte";
             $letter->message = 'FROM: '. $this->mailServer->getName() . PHP_EOL;
             $letter->message .= $this->statusObject->getDatetime()->format('d.m.Y H:i:s') .': '
@@ -65,9 +69,10 @@ class AbstractMailer implements Mailer
         return $letter;
     }
 
-    public function getReport(array $data)
+    public function getReport(array $data): stdClass
     {
         $message = '';
+        $week = 0;
         foreach ($data as $domain_data) {
             $week = $domain_data->stats->week;
 
@@ -83,14 +88,14 @@ class AbstractMailer implements Mailer
             }
             $message .= PHP_EOL . PHP_EOL;
         }
-        $letter = new \stdClass();
+        $letter = new stdClass();
         $letter->subject = "PING REPORT WEEK #$week from [{$this->mailServer->getName()}]";
         $letter->message = $message;
 
         return $letter;
     }
 
-    public function setDomain(string $domain): void
+    public function setDomain(Domain $domain): void
     {
        $this->domain = $domain;
     }

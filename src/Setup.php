@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool;
 
+use RuntimeException;
+use SQLite3;
+
 class Setup
 {
-    private $handler;
     private $db;
 
     private $sql_monitoring = "
@@ -50,15 +52,13 @@ class Setup
         );
     ";
 
-    public function __construct(ErrorHandler $handler)
+    public function __construct()
     {
-        $this->handler = $handler;
-
         if (!class_exists('SQLite3')) {
-            throw new \RuntimeException('SQLite3 extension not support!');
+            throw new RuntimeException('SQLite3 extension not support!');
         }
         if (!file_exists(ROOT . '/config.ini')) {
-            throw new \RuntimeException('Missing configuration file' . ROOT .'/config.ini');
+            throw new RuntimeException('Missing configuration file' . ROOT .'/config.ini');
         }
     }
 
@@ -69,7 +69,7 @@ class Setup
         if (file_exists(ROOT . '/'.$md5.'.md5')) {
             return;
         }
-        $this->db = new \SQLite3(ROOT . '/monitoring.db');
+        $this->db = new SQLite3(ROOT . '/monitoring.db');
         $this->db->exec($this->sql_monitoring);
         $this->db->exec($this->sql_stats);
         $this->db->exec($this->sql_stats_indx);
@@ -104,7 +104,7 @@ class Setup
         }
     }
 
-    private function isExistDomain($domain)
+    private function isExistDomain($domain): bool
     {
         $res = $this->db->query("SELECT * FROM monitoring WHERE domain='$domain'");
         return is_array($res->fetchArray());

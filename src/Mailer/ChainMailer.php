@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool\Mailer;
 
+use Exception;
 use PingMonitoringTool\ErrorHandler;
 
 class ChainMailer extends AbstractMailer
@@ -27,7 +28,7 @@ class ChainMailer extends AbstractMailer
                 $mailer->setTypeMessage($this->typeMessage);
                 $mailer->setStatusObject($this->statusObject);
                 if ($mailer->send()) return true;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $this->handler->handle($e);
             }
         }
@@ -42,7 +43,7 @@ class ChainMailer extends AbstractMailer
             try {
                 $mailer->setDataReport($this->dataReport);
                 if ($mailer->sendReport()) return true;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $this->handler->handle($e);
             }
         }

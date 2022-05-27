@@ -16,7 +16,7 @@ class MailServer
 
     public function __construct(string $name)
     {
-        $this->name = $this->name;
+        $this->name = $name;
     }
 
     /**
@@ -122,4 +122,5 @@ class MailServer
     {
         return $this->name;
     }
+
 }

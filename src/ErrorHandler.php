@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PingMonitoringTool;
 
+use Exception;
+
 class ErrorHandler
 {
     private $logger;
@@ -13,7 +15,7 @@ class ErrorHandler
         $this->logger = $logger;
     }
 
-    public function handle(\Exception $exception): void
+    public function handle(Exception $exception): void
     {
         $this->logger->error($exception->getMessage(), [
             'exception' => $exception
