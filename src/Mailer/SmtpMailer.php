@@ -136,6 +136,9 @@ class SmtpMailer extends AbstractMailer
     {
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-type: text/plain; charset=utf-8\r\n"; // кодировка письма
+        $headers .= "X-Priority: 1 (Highest)\n";
+        $headers .= "X-MSMail-Priority: High\n";
+        $headers .= "Importance: High\n";
         $headers .= "From: Mera-PING <{$this->mailServer->getUsername()}>\r\n"; // от кого письмо
         $headers .= "To: <$to>\r\n";
 

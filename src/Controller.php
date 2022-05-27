@@ -45,7 +45,7 @@ class Controller
             } else {
                 $this->logger->info('DOWN: ' . $domain->getValue());
                 $this->repository->setDown($domain, $status);
-                $this->repository->writeStats($domain->getValue(), 0);
+                $this->repository->writeStats($domain, 0);
             }
 
             if ($typeSendNotify = $this->repository->canSendNotify($domain)) {
