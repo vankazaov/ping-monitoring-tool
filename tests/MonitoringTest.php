@@ -26,7 +26,7 @@ class MonitoringTest extends TestCase
         $client = $this->createMock(HttpClient::class);
         $client->method('get')->willReturn([
             'datetime' => new \DateTimeImmutable('2022-05-26 15:00:00'),
-            'domain' => 'yandex.ru',
+            'domain' => new Domain('yandex.ru'),
             'code' => 200,
             'code_definition' => 'OK',
             'time' => 0.25,
@@ -53,7 +53,7 @@ class MonitoringTest extends TestCase
         $client = $this->createMock(HttpClient::class);
         $client->method('get')->willReturn([
             'datetime' => new \DateTimeImmutable('2022-05-26 15:00:00'),
-            'domain' => 'yandex.ru',
+            'domain' => new Domain('yandex.ru'),
             'code' => 0,
             'code_definition' => 'DOWN',
             'time' => 0,
@@ -72,7 +72,7 @@ class MonitoringTest extends TestCase
         $client = $this->createMock(HttpClient::class);
         $client->method('get')->willReturn([
             'datetime' => new \DateTimeImmutable('2022-05-26 15:00:00'),
-            'domain' => 'yandex.ru',
+            'domain' => new Domain('yandex.ru'),
             'code' => 0,
             'code_definition' => 'DOWN',
             'time' => 0,
@@ -91,7 +91,7 @@ class MonitoringTest extends TestCase
         $client = $this->createMock(HttpClient::class);
         $client->method('get')->willReturn([
             'datetime' => new \DateTimeImmutable('2022-05-26 15:00:00'),
-            'domain' => 'yandex.ru',
+            'domain' => new Domain('yandex.ru'),
             'code' => 200,
             'code_definition' => 'OK',
             'time' => 0,
@@ -110,7 +110,7 @@ class MonitoringTest extends TestCase
         $client = $this->createMock(HttpClient::class);
         $client->method('get')->willReturn([
             'datetime' => new \DateTimeImmutable('2022-05-26 15:00:00'),
-            'domain' => 'yandex.ru',
+            'domain' => new Domain('yandex.ru'),
             'code' => 301,
             'code_definition' => 'Moved Permanently',
             'time' => 0,
