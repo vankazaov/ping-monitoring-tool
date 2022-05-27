@@ -14,7 +14,7 @@ error_reporting(1);
 $root_dir = realpath(__DIR__.'/');
 define('ROOT', $root_dir);
 
-require_once $root_dir . '/../vendor/autoload.php';
+require_once $root_dir . '/vendor/autoload.php';
 
 try {
     $http_client = new HttpClient();
