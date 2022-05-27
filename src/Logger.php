@@ -6,9 +6,9 @@ namespace PingMonitoringTool;
 
 class Logger
 {
-    private string $mode = 'prod';
-    private int $level = 0;
-    private ?Repository $repository;
+    private $mode = 'prod';
+    private $level = 0;
+    private $repository;
 
     public function __construct($mode = 'prod', $level = 1, ?Repository $repository = null)
     {

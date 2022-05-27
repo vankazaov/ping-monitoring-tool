@@ -8,11 +8,11 @@ use PingMonitoringTool\Mailer\Mailer;
 
 class Controller
 {
-    private Monitoring $monitor;
-    private Repository $repository;
-    private Mailer $mailer;
-    private ErrorHandler $handler;
-    private Logger $logger;
+    private $monitor;
+    private $repository;
+    private $mailer;
+    private $handler;
+    private $logger;
 
     public function __construct(
         Monitoring $monitor,

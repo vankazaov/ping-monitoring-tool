@@ -30,7 +30,9 @@ class Repository
     {
         $stm = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='table'");
         $data = $stm->fetchAll();
-        return array_map(fn($value): string => $value->name, $data);
+        return array_map(function ($value): string {
+            return $value->name;
+        }, $data);
     }
 
     public function getMonitoringList()
@@ -131,6 +133,7 @@ class Repository
             }
             return null;
         }
+        return null;
     }
 
     public function setNotify(Domain $domain, string $typeSendNotify)
@@ -155,7 +158,7 @@ class Repository
      * Получение настроек
      * @return string|array
      */
-    public function getConfigParam($param): string|array
+    public function getConfigParam($param)
     {
         $stm = $this->pdo->query("SELECT `value` FROM `config` WHERE `parameter`='$param'");
         $value = $stm->fetch()->value ?? '';

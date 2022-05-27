@@ -6,7 +6,7 @@ namespace PingMonitoringTool;
 
 class Setup
 {
-    private ErrorHandler $handler;
+    private $handler;
     private $db;
 
     private $sql_monitoring = "

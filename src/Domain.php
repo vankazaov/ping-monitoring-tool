@@ -6,7 +6,7 @@ namespace PingMonitoringTool;
 
 class Domain
 {
-    private string $value;
+    private $value;
 
     public function __construct(string $domain)
     {

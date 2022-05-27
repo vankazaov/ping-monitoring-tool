@@ -9,11 +9,11 @@ use function Couchbase\defaultDecoder;
 
 class AbstractMailer implements Mailer
 {
-    protected string $domain;
-    protected string $typeMessage;
-    protected array $dataReport;
-    protected MailServer $mailServer;
-    protected ?Status $statusObject;
+    protected $domain;
+    protected $typeMessage;
+    protected $dataReport;
+    protected $mailServer;
+    protected $statusObject;
 
     public function __construct(MailServer $mailServer)
     {
@@ -50,15 +50,15 @@ class AbstractMailer implements Mailer
             $letter->message .= date('d.m.Y H:i:s') .': ' . $letter->subject . PHP_EOL;
         } else {
             if ($this->typeMessage === 'repeat') {
-                $letter->subject = $this->statusObject?->getStatus() === 'OK' ? 'PING RECOVERY from ' : 'REPEAT PING ALERT from ';
+                $letter->subject = $this->statusObject->getStatus() === 'OK' ? 'PING RECOVERY from ' : 'REPEAT PING ALERT from ';
             } else {
-                $letter->subject = $this->statusObject?->getStatus() === 'OK' ? 'PING RECOVERY from ' : 'PING ALERT from ';
+                $letter->subject = $this->statusObject->getStatus() === 'OK' ? 'PING RECOVERY from ' : 'PING ALERT from ';
             }
             $letter->subject .= $this->mailServer->getName() . ' ';
             $letter->subject .= "[ {$this->domain} ]";
-            $letter->subject .= " {$this->statusObject?->getCode()} {$this->statusObject?->getStatus()}, {$this->statusObject?->getTime()} ms, {$this->statusObject?->getSize()} byte";
+            $letter->subject .= " {$this->statusObject->getCode()} {$this->statusObject->getStatus()}, {$this->statusObject->getTime()} ms, {$this->statusObject->getSize()} byte";
             $letter->message = 'FROM: '. $this->mailServer->getName() . PHP_EOL;
-            $letter->message .= $this->statusObject?->getDatetime()->format('d.m.Y H:i:s') .': '
+            $letter->message .= $this->statusObject->getDatetime()->format('d.m.Y H:i:s') .': '
                 . $letter->subject . PHP_EOL;
         }
 

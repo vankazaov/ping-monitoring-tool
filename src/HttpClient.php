@@ -6,7 +6,7 @@ namespace PingMonitoringTool;
 
 class HttpClient
 {
-    private array $http_codes = [
+    private $http_codes = [
         0=>"DOWN",
         100=>"Continue",
         101=>"Switching Protocols",

@@ -9,7 +9,7 @@ use PingMonitoringTool\ErrorHandler;
 class ChainMailer extends AbstractMailer
 {
     private $mailers;
-    private ErrorHandler $handler;
+    private $handler;
 
     public function __construct(ErrorHandler $handler, Mailer ...$mailers)
     {

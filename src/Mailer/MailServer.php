@@ -6,14 +6,18 @@ namespace PingMonitoringTool\Mailer;
 
 class MailServer
 {
-    private string $host;
-    private string $port = '25';
-    private string $username = '';
-    private string $password = '';
-    private string $from = '';
-    private array $recipients = [];
+    private $host;
+    private $port = '25';
+    private $username = '';
+    private $password = '';
+    private $from = '';
+    private $recipients = [];
+    private $name;
 
-    public function __construct(private string $name){}
+    public function __construct(string $name)
+    {
+        $this->name = $this->name;
+    }
 
     /**
      * @return string

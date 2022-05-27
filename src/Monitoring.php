@@ -7,8 +7,8 @@ namespace PingMonitoringTool;
 
 class Monitoring
 {
-    private ErrorHandler $handler;
-    private HttpClient $client;
+    private $handler;
+    private $client;
 
     public function __construct(ErrorHandler $handler, HttpClient $client)
     {

@@ -28,7 +28,9 @@ class PrintDb
     {
         $stm = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='table'");
         $data = $stm->fetchAll();
-        return array_map(fn($value): string => $value->name, $data);
+        return array_map(function ($value): string {
+            return $value->name;
+        }, $data);
     }
 
     public function printConsole(string $onlyTable = '')

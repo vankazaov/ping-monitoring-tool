@@ -6,15 +6,28 @@ namespace PingMonitoringTool;
 
 class Status
 {
+    private $domain;
+    private $datetime;
+    private $code;
+    private $status;
+    private $time;
+    private $size;
+
     public function __construct(
-        private string $domain,
-        private \DateTimeImmutable $datetime,
-        private int $code,
-        private string $status,
-        private float $time,
-        private float $size)
+        string $domain,
+        \DateTimeImmutable $datetime,
+        int $code,
+        string $status,
+        float $time,
+        float $size)
     {
 
+        $this->domain = $domain;
+        $this->datetime = $datetime;
+        $this->code = $code;
+        $this->status = $status;
+        $this->time = $time;
+        $this->size = $size;
     }
 
     /**

@@ -6,14 +6,14 @@ namespace PingMonitoringTool;
 
 class VerifiedDomain
 {
-    private string $domain;
-    private int $success;
-    private int $falls;
-    private \DateTimeImmutable $lastAt;
-    private int $notify_success;
-    private int $notify_falls;
-    private int $week;
-    private bool $weekReport;
+    private $domain;
+    private $success;
+    private $falls;
+    private $lastAt;
+    private $notify_success;
+    private $notify_falls;
+    private $week;
+    private $weekReport;
 
     public function __construct(string $domain)
     {
