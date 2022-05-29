@@ -81,15 +81,15 @@ class Repository
         $stm = $this->pdo->query("SELECT * FROM `monitoring` WHERE `domain`='{$domain->getValue()}'");
         if($res = $stm->fetch()) {
             $verifiedDomain = new VerifiedDomain($domain);
-            $verifiedDomain->setSuccess($res->success);
-            $verifiedDomain->setFalls($res->falls);
+            $verifiedDomain->setSuccess((int) $res->success);
+            $verifiedDomain->setFalls((int) $res->falls);
             try {
                 $verifiedDomain->setLastAt(new DateTimeImmutable($res->last_at));
             } catch (\Exception $e) {
             }
-            $verifiedDomain->setNotifyFalls($res->notify_falls);
-            $verifiedDomain->setNotifySuccess($res->notify_success);
-            $verifiedDomain->setWeek($res->week);
+            $verifiedDomain->setNotifyFalls((int) $res->notify_falls);
+            $verifiedDomain->setNotifySuccess((int) $res->notify_success);
+            $verifiedDomain->setWeek((int) $res->week);
             $verifiedDomain->setWeekReport((bool) $res->week_report);
             return $verifiedDomain;
         }
