@@ -36,7 +36,7 @@ class PhpMailer extends AbstractMailer
             $headers .= "X-MSMail-Priority: High\n";
             $headers .= "Importance: High\n";
             $headers .= "From: Mera-PING <{$this->mailServer->getFrom()}>\r\n"; // от кого письмо
-            $headers .= "To: <$to>\r\n";
+            //$headers .= "To: <$to>\r\n";
 
             $result = mail($to, $letter->subject, $letter->message, $headers);
         }
