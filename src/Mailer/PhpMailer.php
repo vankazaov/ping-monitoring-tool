@@ -8,6 +8,10 @@ class PhpMailer extends AbstractMailer
 {
     public function send(): bool
     {
+        $sendmailPath = trim((string)shell_exec('which sendmail'));
+        if (empty($sendmailPath)) {
+            throw new \RuntimeException("sendmail не найден на сервере.");
+        }
         ini_set("SMTP", $this->mailServer->getHost());
         ini_set("sendmail_from", $this->mailServer->getFrom());
 

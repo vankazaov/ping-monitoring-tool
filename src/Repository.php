@@ -121,6 +121,11 @@ class Repository
          * @var $domainDB VerifiedDomain
          */
         $domainDB = $this->getDomain($domain);
+        $failed_attempts = $this->getConfigParam('failed_attempts');
+        $failed_attempts_count = 0;
+        if(!empty($failed_attempts)) {
+            $failed_attempts_count = (int)$failed_attempts[$domain->getValue()] ?? 2;
+        }
         if (!is_null($domainDB)) {
             if ($domainDB->getSuccess() > 0) {
                 $diff = $domainDB->getSuccess() - $domainDB->getFalls();
@@ -132,7 +137,7 @@ class Repository
                 }
             } else {
                 $diff = $domainDB->getFalls() - $domainDB->getSuccess();
-                if ($diff >= 2
+                if ($diff >= $failed_attempts_count
                     && $domainDB->getNotifyFalls() <= 0
                     && ($domainDB->getNotifySuccess() < 0 || $domainDB->getNotifySuccess() > 0))
                 {

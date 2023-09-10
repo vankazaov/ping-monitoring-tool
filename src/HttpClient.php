@@ -56,6 +56,10 @@ class HttpClient
 
     public function get(Domain $domain): array
     {
+        if (!function_exists('curl_version')) {
+            echo 'Функции библиотеки curl недоступны!' . PHP_EOL;
+            exit(2);
+        }
         $chPing = curl_init();
         curl_setopt($chPing, CURLOPT_URL, $domain->getValue());
         curl_setopt($chPing, CURLOPT_USERAGENT, 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:99.0) Gecko/20100101 Firefox/99.0');

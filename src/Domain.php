@@ -16,7 +16,7 @@ class Domain
             throw new InvalidArgumentException('Empty domain.');
         }
 
-        if (filter_var($domain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false) {
+        if (filter_var($domain, FILTER_VALIDATE_DOMAIN, FILTER_VALIDATE_URL) === false) {
             throw new InvalidArgumentException('Invalid domain '. $domain);
         }
 

@@ -36,7 +36,7 @@ try {
     $controller->run();
 
     //$printer = new PrintDb();
-    //$printer->printConsole('logs');
+    //$printer->printConsole('monitoring');
 
 } catch (Exception $e) {
     echo $e->getMessage() . PHP_EOL;

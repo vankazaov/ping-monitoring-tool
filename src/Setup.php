@@ -85,6 +85,7 @@ class Setup
             unlink($filename);
         }
         $ini_array = parse_ini_file(ROOT . "/config.ini");
+        $this->removeOldDomainsFromMonitoring($ini_array['servers']);
         $this->loadDomains($ini_array['servers']);
         $this->loadParams($ini_array);
         $md5 = md5_file(ROOT . '/config.ini');
@@ -118,6 +119,30 @@ class Setup
             }
             $this->db->exec("INSERT INTO config (parameter, value) VALUES('$key', '$value')");
         }
+    }
+
+    private function removeOldDomainsFromMonitoring($domains)
+    {
+        $exists_domain = $this->getExistsDomain();
+        $for_delete = array_diff($exists_domain, $domains);
+        foreach ($for_delete as $domain) {
+            $this->deleteDomain($domain);
+        }
+    }
+
+    private function getExistsDomain()
+    {
+        $exists_domains = [];
+        $res = $this->db->query("SELECT * FROM monitoring");
+        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+            $exists_domains[] = $row['domain'];
+        }
+        return $exists_domains;
+    }
+
+    private function deleteDomain($domain)
+    {
+        $this->db->exec("DELETE FROM monitoring WHERE domain='$domain'");
     }
 
 }
